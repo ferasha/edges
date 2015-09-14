@@ -21,7 +21,7 @@ figure(1); im(I); figure(2); im(V);
 
 %% compute ultrametric contour map from superpixels (see spAffinities.m)
 tic, [~,~,U]=spAffinities(S,E,segs,opts.nThreads); toc
-figure(3); im(1-U); return;
+figure(3); im(1-U); %%return;
 
 %% compute video superpixels reusing initialization from previous frame
 Is=seqIo(which('peds30.seq'),'toImgs'); Vs=single(Is); opts.bounds=0; tic

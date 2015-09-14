@@ -21,6 +21,7 @@ model.opts.nms=0;                 % set to true to enable nms
 if(0), edgesEval( model, 'show',1, 'name','' ); end
 
 %% detect edge and visualize results
-I = imread('peppers.png');
+%I = imread('peppers.png');
+I = imread('/media/data1/work/datasets/CamVid/extracted_testing/Seq05VD_f01860_colors.png');
 tic, E=edgesDetect(I,model); toc
 figure(1); im(I); figure(2); im(1-E);
