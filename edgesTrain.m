@@ -74,8 +74,8 @@ dfs={'imWidth',32, 'gtWidth',16, 'nPos',5e5, 'nNeg',5e5, 'nImgs',inf, ...
   'split','gini', 'nOrients',4, 'grdSmooth',0, 'chnSmooth',2, ...
   'simSmooth',8, 'normRad',4, 'shrink',2, 'nCells',5, 'rgbd',0, ...
   'stride',2, 'multiscale',0, 'sharpen',2, 'nTreesEval',4, ...
-  'nThreads',4, 'nms',0, 'seed',1, 'useParfor',0, 'modelDir','models/', ...
-  'modelFnm','model', 'bsdsDir','BSR/BSDS500/data/'};
+  'nThreads',7, 'nms',0, 'seed',1, 'useParfor',0, 'modelDir','/media/data1/work/results/SF_edges/', ...
+  'modelFnm','model', 'bsdsDir','/media/data1/work/datasets/CamVid'};
 opts = getPrmDflt(varargin,dfs,1);
 if(nargin==0), model=opts; return; end
 
@@ -147,7 +147,11 @@ parfor i=1:nTrees*nNodes, m=nSegs(i);
   if(del), [~,~,S]=unique(S); S=reshape(S-1,gtWidth,gtWidth);
     segs(:,:,i)=S; nSegs(i)=max(S(:))+1; end
 end
-model.segs=segs; model.nSegs=nSegs;
+fprintf('after merging trees\n');
+max(model.segs(:))
+%model.segs=segs; 
+model.nSegs=nSegs;
+nSegs
 % store compact representations of sparse binary edge patches
 nBnds=opts.sharpen+1; eBins=cell(nTrees*nNodes,nBnds);
 eBnds=zeros(nNodes*nTrees,nBnds);
@@ -165,9 +169,9 @@ function trainTree( opts, stream, treeInd )
 % Train a single tree in forest model.
 
 % location of ground truth
-trnImgDir = [opts.bsdsDir '/images/train/'];
+trnImgDir = [opts.bsdsDir '/extracted_training_only_color/'];
 trnDepDir = [opts.bsdsDir '/depth/train/'];
-trnGtDir = [opts.bsdsDir '/groundTruth/train/'];
+trnGtDir = [opts.bsdsDir '/SF_edges/training/'];
 imgIds=dir(trnImgDir); imgIds=imgIds([imgIds.bytes]>0);
 imgIds={imgIds.name}; ext=imgIds{1}(end-2:end);
 nImgs=length(imgIds); for i=1:nImgs, imgIds{i}=imgIds{i}(1:end-4); end
@@ -229,8 +233,9 @@ for i = 1:nImgs
     psReg(:,:,:,j)=chnsReg(xy2(2)-ri+1:xy2(2)+ri,xy2(1)-ri+1:xy2(1)+ri,:);
     psSim(:,:,:,j)=chnsSim(xy2(2)-ri+1:xy2(2)+ri,xy2(1)-ri+1:xy2(1)+ri,:);
     t=gt{xy1(3)}.Segmentation(xy1(2)-rg+1:xy1(2)+rg,xy1(1)-rg+1:xy1(1)+rg);
-    if(all(t(:)==t(1))), lbls(:,:,j)=1; else [~,~,t]=unique(t);
-      lbls(:,:,j)=reshape(t,gtWidth,gtWidth); end
+   % if(all(t(:)==t(1))), lbls(:,:,j)=1; else [~,~,t]=unique(t);
+   %   lbls(:,:,j)=reshape(t,gtWidth,gtWidth); end
+   lbls(:,:,j)=reshape(t,gtWidth,gtWidth);
   end
   if(0), figure(1); montage2(squeeze(psReg(:,:,1,:))); drawnow; end
   if(0), figure(2); montage2(lbls(:,:,:)); drawnow; end
@@ -246,7 +251,9 @@ if(k<size(ftrs,1)), ftrs=ftrs(1:k,:); labels=labels(:,:,1:k); end
 pTree=struct('minCount',opts.minCount, 'minChild',opts.minChild, ...
   'maxDepth',opts.maxDepth, 'H',opts.nClasses, 'split',opts.split);
 t=labels; labels=cell(k,1); for i=1:k, labels{i}=t(:,:,i); end
+fprintf('before discretize \n');
 pTree.discretize=@(hs,H) discretize(hs,H,opts.nSamples,opts.discretize);
+fprintf('after discretize \n');
 tree=forestTrain(ftrs,labels,pTree); tree.hs=cell2array(tree.hs);
 tree.fids(tree.child>0) = fids(tree.fids(tree.child>0)+1)-1;
 if(~exist(treeDir,'dir')), mkdir(treeDir); end
