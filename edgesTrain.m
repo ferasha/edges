@@ -73,11 +73,11 @@ dfs={'imWidth',32, 'gtWidth',16, 'nPos',5e5, 'nNeg',5e5, 'nImgs',inf, ...
   'maxDepth',64, 'discretize','pca', 'nSamples',256, 'nClasses',2, ...
   'split','gini', 'nOrients',4, 'grdSmooth',0, 'chnSmooth',2, ...
   'simSmooth',8, 'normRad',4, 'shrink',2, 'nCells',5, 'rgbd',0, ...
-  'stride',2, 'multiscale',0, 'sharpen',2, 'nTreesEval',4, ...
-  'nThreads',7, 'nms',0, 'seed',1, 'useParfor',0, 'modelDir','/media/data1/work/results/SF_edges/', ...
+  'stride',2, 'multiscale',0, 'sharpen',0, 'nTreesEval',4, ...
+  'nThreads',7, 'nms',0, 'seed',1, 'useParfor',0, 'modelDir','/media/data1/work/results/SF_edges_k_2_medoid/', ...
   'modelFnm','model', 'bsdsDir','/media/data1/work/datasets/CamVid'};
 opts = getPrmDflt(varargin,dfs,1);
-if(nargin==0), model=opts; return; end
+%if(nargin==0), model=opts; return; end
 
 % if forest exists load it and return
 cd(fileparts(mfilename('fullpath')));
@@ -136,7 +136,7 @@ for i=1:nTrees, tree=trees(i); nNodes1=size(tree.fids,1);
   model.child(1:nNodes1,i) = tree.child;
   model.count(1:nNodes1,i) = tree.count;
   model.depth(1:nNodes1,i) = tree.depth;
-  model.segs(:,:,1:nNodes1,i) = tree.hs-1;
+  model.segs(:,:,1:nNodes1,i) = tree.hs;
 end
 % remove very small segments (<=5 pixels)
 segs=model.segs; nSegs=squeeze(max(max(segs)))+1;
@@ -151,7 +151,7 @@ fprintf('after merging trees\n');
 max(model.segs(:))
 %model.segs=segs; 
 model.nSegs=nSegs;
-nSegs
+%nSegs
 % store compact representations of sparse binary edge patches
 nBnds=opts.sharpen+1; eBins=cell(nTrees*nNodes,nBnds);
 eBnds=zeros(nNodes*nTrees,nBnds);

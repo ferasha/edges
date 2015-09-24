@@ -135,15 +135,16 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
     for( int c=c0; c<w1; c+=gtWidth/stride ) {
       for( int r=0; r<h1; r++ ) for( int t=0; t<nTreesEval; t++ ) {
         uint32 k = ind[ r + c*h1 + t*h1*w1 ];
-        float *E1 = E + (r*stride) + (c*stride)*h2;
+    /*    float *E1 = E + (r*stride) + (c*stride)*h2;
         int b0=eBnds[k*nBnds], b1=eBnds[k*nBnds+1]; if(b0==b1) continue;
-        for( int b=b0; b<b1; b++ ) E1[eids[eBins[b]]]++;
+        for( int b=b0; b<b1; b++ ) E1[eids[eBins[b]]]++; */
         if(nl>2) memcpy(segsOut+(r+c*h1+t*h1*w1)*gtWidth*gtWidth,
           segs+k*gtWidth*gtWidth,gtWidth*gtWidth*sizeof(uint8));
       }
     }
   }
 
+  /*
   // computed sharpened edge maps, snapping to local color values
   if( sharpen ) {
     // compute neighbors array
@@ -195,7 +196,7 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
       }
     }
   }
-
+*/
   // free memory
   delete [] iids; delete [] eids;
   delete [] cids; delete [] cids1; delete [] cids2;
