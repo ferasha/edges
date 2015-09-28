@@ -77,7 +77,7 @@ dfs={'imWidth',32, 'gtWidth',16, 'nPos',5e5, 'nNeg',5e5, 'nImgs',inf, ...
   'nThreads',7, 'nms',0, 'seed',1, 'useParfor',0, 'modelDir','/media/data1/work/results/SF_edges_k_2_medoid/', ...
   'modelFnm','model', 'bsdsDir','/media/data1/work/datasets/CamVid'};
 opts = getPrmDflt(varargin,dfs,1);
-%if(nargin==0), model=opts; return; end
+if(nargin==0), model=opts; return; end
 
 % if forest exists load it and return
 cd(fileparts(mfilename('fullpath')));
@@ -254,7 +254,7 @@ t=labels; labels=cell(k,1); for i=1:k, labels{i}=t(:,:,i); end
 fprintf('before discretize \n');
 pTree.discretize=@(hs,H) discretize(hs,H,opts.nSamples,opts.discretize);
 fprintf('after discretize \n');
-tree=forestTrain(ftrs,labels,pTree); tree.hs=cell2array(tree.hs);
+tree=forestTrain2(ftrs,labels,pTree); tree.hs=cell2array(tree.hs);
 tree.fids(tree.child>0) = fids(tree.fids(tree.child>0)+1)-1;
 if(~exist(treeDir,'dir')), mkdir(treeDir); end
 save([treeFn int2str2(treeInd,3) '.mat'],'tree'); e=etime(clock,tStart);
