@@ -4,7 +4,7 @@
 opts=edgesTrain();                % default options (good settings)
 %opts.modelDir='models/';          % model will be in models/forest
 %opts.modelFnm='modelBsds';        % model name
-opts.modelDir='/media/data1/work/results/SF_edges_k_2_medoid/';          % model will be in models/forest
+opts.modelDir='/media/data1/work/results/SF_edges_k_30_matrix_z_1_cluster/';          % model will be in models/forest
 opts.modelFnm='model';        % model name
 opts.nPos=5e5; opts.nNeg=5e5;     % decrease to speedup training
 opts.useParfor=0;                 % parallelize if sufficient memory
@@ -24,9 +24,10 @@ if(0), edgesEval( model, 'show',1, 'name','' ); end
 
 %% detect edge and visualize results
 %I = imread('peppers.png');
-I = imread('/media/data1/work/datasets/CamVid/extracted_testing/Seq05VD_f01860_colors.png');
+%I = imread('/media/data1/work/datasets/CamVid/extracted_testing/Seq05VD_f01860_colors.png');
 %I = imread('/media/data1/work/datasets/CamVid/extracted_training/0001TP_006690_colors.png');
-%I = imread('/media/data1/work/datasets/CamVid/extracted_testing/0001TP_008550_colors.png');
+I = imread('/media/data1/work/datasets/CamVid/extracted_testing/0001TP_008550_colors.png');
+
 tic, [E,O,inds,segs]=edgesDetect(I,model); toc
 gtWidth = size(segs,1);
 imageWidth_S = size(segs,3);
@@ -160,8 +161,15 @@ votes = zeros(nClasses ,imageWidth_S*stride, imageHeight_S*stride);
 % votes = zeros(nClasses ,imageWidth_S*stride, imageHeight_S*stride);
 
 tic,
-p_size = gtWidth*gtWidth;
-for t=1:nTrees
+p_size = gtWidth*gtWidth*nTrees;
+% p_size = gtWidth*gtWidth*imageWidth_S*imageHeight_S*nTrees;
+% hist = zeros(nClasses, p_size);
+% x = double(segs(:,:,:,:,:))+1;
+% hist(sub2ind(size(hist),reshape(x,1,p_size),1:p_size)) = 1;
+% hist = reshape(hist,nClasses, gtWidth,gtWidth, imageWidth_S, imageHeight_S, nTrees);  
+% hist = sum(hist,4);
+
+%for t=1:nTrees
     w=1;
     for i=1:imageWidth_S
         h=1;
@@ -195,19 +203,50 @@ for t=1:nTrees
                 end_v = gtWidth-(h+rg-size(votes,3)); %rg;
             end
          %   h, w, start_w, end_w, start_h, end_h, start_u, end_u, start_v, end_v,
+%             hist = zeros(nClasses, p_size);
+%             x = double(segs(:,:,i,j,t))+1;
+%             hist(sub2ind(size(hist),reshape(x,1,p_size),1:p_size)) = 1;
+%             hist = reshape(hist,nClasses, gtWidth,gtWidth);       
+            
+            
             hist = zeros(nClasses, p_size);
-            x = double(segs(:,:,i,j,t))+1;
+            x = double(segs(:,:,i,j,:))+1;
             hist(sub2ind(size(hist),reshape(x,1,p_size),1:p_size)) = 1;
-            hist = reshape(hist,nClasses, gtWidth,gtWidth);       
+            hist = reshape(hist,nClasses, gtWidth,gtWidth, nTrees);  
+            hist = sum(hist,4);
+            
             bhist = hist(:,start_u:end_u,start_v:end_v);
-
             votes(:,start_w:end_w, start_h:end_h) = votes(:,start_w:end_w, start_h:end_h) + bhist;
             h=h+stride;
         end
         w=w+stride;
     end
-end
+%end
 toc
+
+% votes2 = zeros(nClasses ,imageWidth_S*stride, imageHeight_S*stride);
+% tic,
+% for t=1:nTrees
+%     w=1;
+%     for i=1:100%imageWidth_S
+%         h=1;
+%         for j=1:100%imageHeight_S
+%             for p_i=1:gtWidth
+%                 if w-rg+p_i >= 1 && w-rg+p_i <= size(votes,2)
+%                     for p_j=1:gtWidth
+%                         if h-rg+p_j >= 1 && h-rg+p_j <= size(votes,3)
+%                             votes2(segs(p_i,p_j,i,j,t)+1,w-rg+p_i, h-rg+p_j) = votes2(segs(p_i,p_j,i,j,t)+1,w-rg+p_i, h-rg+p_j) + 1;
+%                         end
+%                     end
+%                 end
+%             end
+%             h=h+stride;
+%         end
+%         w=w+stride;
+%     end
+% end
+% toc
+
 
 
 tic, [M,In] = max(votes,[],1); toc
