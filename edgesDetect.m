@@ -1,4 +1,4 @@
-function [E,O,inds,segs] = edgesDetect( I, model )
+function [E,O,inds,segs, votes] = edgesDetect( I, model )
 % Detect edges in image.
 %
 % For an introductory tutorial please see edgesDemo.m.
@@ -46,6 +46,7 @@ if( opts.multiscale )
   end; E=E/k; model.opts=opts;
   
 else
+    tic,
   % pad image, making divisible by 4
   siz=size(I); r=opts.imWidth/2; p=[r r r r];
   p([2 4])=p([2 4])+mod(4-mod(siz(1:2)+2*r,4),4);
@@ -53,16 +54,16 @@ else
   
   % compute features and apply forest to image
   [chnsReg,chnsSim] = edgesChns( I, opts );
-  s=opts.sharpen; if(s), I=convTri(rgbConvert(I,'rgb'),1); end
-  max(model.segs(:))
+  s=opts.sharpen; if(s), I=convTri(rgbConvert(I,'rgb'),1); end ,toc;
+  %max(model.segs(:))
   if(nargout<4), [E,inds] = edgesDetectMex(model,I,chnsReg,chnsSim);
-  else [E,inds,segs] = edgesDetectMex(model,I,chnsReg,chnsSim); end
-  max(segs(:))
+  else [E,inds,segs, votes] = edgesDetectMex(model,I,chnsReg,chnsSim); end
+  %max(segs(:))
   
   % normalize and finalize edge maps
-  t=opts.stride^2/opts.gtWidth^2/opts.nTreesEval; r=opts.gtWidth/2;
-  if(s==0), t=t*2; elseif(s==1), t=t*1.8; else t=t*1.66; end
-  E=E(1+r:siz(1)+r,1+r:siz(2)+r,:)*t; E=convTri(E,1);
+%   t=opts.stride^2/opts.gtWidth^2/opts.nTreesEval; r=opts.gtWidth/2;
+%   if(s==0), t=t*2; elseif(s==1), t=t*1.8; else t=t*1.66; end
+%   E=E(1+r:siz(1)+r,1+r:siz(2)+r,:)*t; E=convTri(E,1);
 end
 
 % compute approximate orientation O from edges E

@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
 #ifdef USEOMP
 #include <omp.h>
 #endif
@@ -71,6 +72,7 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
   if( sharpen>nBnds-1 ) { sharpen=nBnds-1; mexPrintf(msgSharpen,sharpen); }
 
   // get dimensions and constants
+  const int nClasses = 30;
   const mwSize *imgSize = mxGetDimensions(pr[1]);
   const int h = (int) imgSize[0];
   const int w = (int) imgSize[1];
@@ -88,6 +90,10 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
   const int outDims[3] = {h2,w2,1};
   const int segDims[5] = {gtWidth,gtWidth,h1,w1,nTreesEval};
 
+  const int org_height = h1*stride;
+  const int org_width = w1*stride;
+  const int votesDims[3] = {nClasses,org_height,org_width};
+
   // construct lookup tables
   uint32 *iids, *eids, *cids, *cids1, *cids2;
   iids = buildLookup( (int*)imgDims, gtWidth );
@@ -102,6 +108,8 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
   uint32 *ind = (uint32*) mxGetData(pl[1]);
   if(nl>2) pl[2] = mxCreateNumericArray(5,segDims,mxUINT8_CLASS,mxREAL);
   uint8 *segsOut; if(nl>2) segsOut = (uint8*) mxGetData(pl[2]);
+  if(nl>3) pl[3] = mxCreateNumericArray(3,votesDims,mxINT32_CLASS,mxREAL);
+  int *votesOut; if(nl>3) votesOut = (int*) mxGetData(pl[3]);
 
   // apply forest to all patches and store leaf inds
   #ifdef USEOMP
@@ -143,6 +151,28 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
       }
     }
   }
+
+  int rg = gtWidth/2;
+	for (int t = 0; t < nTreesEval; t++) {
+		int c_ = 0;
+		for (int i = 0; i < w1; i++) {
+			int r_ = 0;
+			for (int j = 0; j < h1; j++) {
+				for (int p_i = 0; p_i < gtWidth; p_i++)
+					if (c_ - rg + p_i >= 0 && c_ - rg + p_i < org_width)
+						for (int p_j = 0; p_j < gtWidth; p_j++)
+							if (r_ - rg + p_j >= 0 && r_ - rg + p_j < org_height) {
+								int cl = (int)(segsOut[p_j + p_i*gtWidth + j*gtWidth*gtWidth + i*gtWidth*gtWidth*h1 + t*gtWidth*gtWidth*h1*w1 ]);
+								votesOut[cl + (r_-rg+p_j)*nClasses + (c_-rg+p_i)*nClasses*org_height] += 1;
+							}
+				r_ = r_ + stride;
+			}
+
+
+			c_ = c_ + stride;
+		}
+	}
+
 
   /*
   // computed sharpened edge maps, snapping to local color values
