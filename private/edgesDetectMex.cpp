@@ -163,7 +163,8 @@ void mexFunction( int nl, mxArray *pl[], int nr, const mxArray *pr[] )
 						for (int p_j = 0; p_j < gtWidth; p_j++)
 							if (r_ - rg + p_j >= 0 && r_ - rg + p_j < org_height) {
 								int cl = (int)(segsOut[p_j + p_i*gtWidth + j*gtWidth*gtWidth + i*gtWidth*gtWidth*h1 + t*gtWidth*gtWidth*h1*w1 ]);
-								votesOut[cl + (r_-rg+p_j)*nClasses + (c_-rg+p_i)*nClasses*org_height] += 1;
+								if (cl < 11)
+									votesOut[cl + (r_-rg+p_j)*nClasses + (c_-rg+p_i)*nClasses*org_height] += 1;
 							}
 				r_ = r_ + stride;
 			}

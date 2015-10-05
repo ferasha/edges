@@ -23,12 +23,93 @@ model.opts.nms=0;                 % set to true to enable nms
 if(0), edgesEval( model, 'show',1, 'name','' ); end
 
 %% detect edge and visualize results
+
+ignored_labels = 11:29;
+confusion_matrix = zeros(30,30);
+base_gt_folder = '/media/data1/work/datasets/CamVid/SF_edges/testing';
+base_pred_folder = '/media/data1/work/results/SF_edges/all_1';
+base_color_folder = '/media/data1/work/datasets/CamVid/extracted_testing/';
+files = dir(strcat(base_color_folder,'/*_colors.png'));
+
+    colors = [[128,64,128]; [128,0,0]; [128,128,128]; [128,128,0]; [0,0,192]; [64,0,128]; [192,192,128]; [192,128,128]; ... 
+    [64,64,128]; [64,64,0]; [0,128,192]; [0,0,0]; [64,128,64]; [192,0,128]; [0,128,64]; [64,0,192]; [192,128,64]; ...
+    [128,0,192]; [192,0,64]; [128,128,64]; [192,0,192]; [128,64,64]; [64,192,128]; [128,128,192]; [64,128,192]; ...
+    [0,0,64]; [0,64,64]; [192,128,192]; [192,192,0]; [64,192,0]];
+
+accuracy_mat = containers.Map; %empty(length(files),2);
+avg_pixel_accuracy = 0;
+file_ind = 1;
+
+for file = files'
+    full_filename = fullfile(base_color_folder,files(file_ind).name)
+    I = imread(full_filename);
+    
+    base_filename = files(file_ind).name(1:length(files(file_ind).name)-4);
+
+tic, [E,O,inds,segs, votes]=edgesDetect(I,model); toc
+
+[~,predicted] = max(votes,[],1);
+predicted = squeeze(predicted)-1;
+%groundtruth_file = load('/media/data1/work/datasets/CamVid/SF_edges/testing/Seq05VD_f01860_colors.mat');
+gt_filename = fullfile(base_gt_folder,strcat(base_filename,'.mat'));
+groundtruth_data = load(gt_filename);
+gt = double(groundtruth_data.groundTruth{1}.Segmentation);
+gt(gt>29)=11; %black = void
+mask = ~ismember(gt,ignored_labels);
+idx = find(mask);
+% accuracy(file_ind,1) = files(file_ind).name;
+% accuracy(file_ind,2) = sum(sum(gt(idx)==predicted(idx)))/length(idx);
+% accuracy(file_ind,2)
+accuracy = sum(sum(gt(idx)==predicted(idx)))/length(idx);
+avg_pixel_accuracy = avg_pixel_accuracy + accuracy;
+accuracy_mat(files(file_ind).name) = accuracy;
+accuracy_mat(files(file_ind).name)
+
+c_idx = sub2ind(size(confusion_matrix),gt+1,predicted+1);
+classes_hist = histc(c_idx(:),1:900);
+confusion_matrix(:) = confusion_matrix(:) + classes_hist;
+
+pred_mat_filename = fullfile(base_pred_folder,strcat(base_filename,'.mat'));
+save(pred_mat_filename,'predicted');
+%save('/media/data1/work/results/pred_labels.mat','predicted');
+%convert_labels_to_colors(predicted);
+
+
+    image_width = size(predicted,1);
+    image_height = size(predicted, 2);
+    color_image = zeros(image_width, image_height, 3);
+    for i=1:image_width
+        for j = 1:image_height
+            color_image(i,j,:) = colors(predicted(i,j)+1,:,:)/255;
+        end
+    end
+    
+    pred_color_filename = fullfile(base_pred_folder,strcat(base_filename,'_prediction.png'));
+    imwrite(color_image, pred_color_filename);
+    %imwrite(color_image, '/media/data1/work/results/pred.png');
+
+  file_ind = file_ind+1;  
+end
+
+avg_pixel_accuracy = avg_pixel_accuracy / length(files)
+dlmwrite(fullfile(base_pred_folder,'results_log.txt'),avg_pixel_accuracy);
+
+row_sum = sum(confusion_matrix,2);
+confusion_matrix = confusion_matrix ./ (repmat(row_sum,1,30)+0.00001);
+avg_class_accuracy = diag(confusion_matrix);
+avg_class_accuracy = sum(avg_class_accuracy(1:11))/11
+dlmwrite(fullfile(base_pred_folder,'results_log.txt'),avg_class_accuracy,'-append','roffset',1);
+
+dlmwrite(fullfile(base_pred_folder,'results_log.txt'),confusion_matrix,'-append','roffset',1,'precision', '%6.3f','delimiter',' ');
+
+
 %I = imread('peppers.png');
-I = imread('/media/data1/work/datasets/CamVid/extracted_testing/Seq05VD_f01860_colors.png');
+
+%I = imread('/media/data1/work/datasets/CamVid/extracted_testing/Seq05VD_f01860_colors.png');
 %I = imread('/media/data1/work/datasets/CamVid/extracted_training/0001TP_006690_colors.png');
 %I = imread('/media/data1/work/datasets/CamVid/extracted_testing/0001TP_008550_colors.png');
 
-tic, [E,O,inds,segs, votes]=edgesDetect(I,model); toc
+
 
 % tic, [E,O,inds,segs]=edgesDetect(I,model); toc
 % gtWidth = size(segs,1);
@@ -113,23 +194,6 @@ tic, [E,O,inds,segs, votes]=edgesDetect(I,model); toc
 % %end
 % toc
 
-ignored_labels = [11;29];
-confusion_matrix = zeros(30,30);
-
-[~,predicted] = max(votes,[],1);
-predicted = squeeze(predicted)-1;
-groundtruth_file = load('/media/data1/work/datasets/CamVid/SF_edges/testing/Seq05VD_f01860_colors.mat');
-gt = double(groundtruth_file.groundTruth{1}.Segmentation);
-mask = ~ismember(gt,ignored_labels);
-idx = find(mask);
-accuracy = sum(sum(gt(idx)==predicted(idx)))/length(idx)
-
-c_idx = sub2ind(size(confusion_matrix),gt+1,predicted+1);
-classes_hist = histc(c_idx(:),1:900);
-confusion_matrix(:) = confusion_matrix(:) + h;
-
-save('/media/data1/work/results/pred_labels.mat','predicted');
-convert_labels_to_colors(predicted);
 
 
 %figure(1); im(I); figure(2); im(1-E);
